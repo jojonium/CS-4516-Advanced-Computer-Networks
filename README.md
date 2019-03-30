@@ -33,10 +33,21 @@ Set a password for user tc (the script uses `cs4516` as the password)
 
 `sudo passwd tc`
 
+Make sure SSH starts at boot
+
+`sudo sh -c 'echo "sudo /usr/local/etc/init.d/openssh start" >> /opt/bootlocal.sh'`
+
 TinyCore uses a RAM-based filesystem, so you need to store the changes you make
 or they will be lost on reboot.
 
 Backup ssh configuration and shadow file:
 
-`sudo printf '/usr/local/etc/ssh' >> /opt/.filetool.lst`
-`sudo printf '/etc/shadow' >> /opt/.filetool.lst`
+`echo '/usr/local/etc/ssh' >> /opt/.filetool.lst`
+
+`echo '/etc/shadow' >> /opt/.filetool.lst`
+
+Backup changes:
+
+`filetool.sh -b`
+
+__Note:__ You should be able to reboot and SSH into the TinyCore gateway now.
