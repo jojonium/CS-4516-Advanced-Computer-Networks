@@ -16,7 +16,7 @@ port-forwards from port 12345 of the host to port 22 of the guest VM:
 Then, install Android x86 in another virtual machine, and configure it to use
 the gateway VM to reach the internet:
 
-![](https://github.com/jojonium/CS-4516-Advanced-Computer-Networks/phase1/virtualbox-config.png)
+![](https://raw.githubusercontent.com/jojonium/CS-4516-Advanced-Computer-Networks/master/phase1/virtualbox-config.png)
       
 
 Next, we should install OpenSSH, to make it easier to work on the virtual
