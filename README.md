@@ -21,6 +21,8 @@ the gateway VM to reach the internet:
 __Note:__ Everything below this point can be done by the `phase1/init.sh`
 script, or you can follow along and do it manually.
 
+### SSH
+
 We should install OpenSSH, to make it easier to work on the virtual machine.
 
 `tce-load -wi openssh`
@@ -42,12 +44,44 @@ or they will be lost on reboot.
 
 Backup ssh configuration and shadow file:
 
-`echo '/usr/local/etc/ssh' >> /opt/.filetool.lst`
-
-`echo '/etc/shadow' >> /opt/.filetool.lst`
+```
+echo '/usr/local/etc/ssh' >> /opt/.filetool.lst
+echo '/etc/shadow' >> /opt/.filetool.lst
+```
 
 Backup changes:
 
 `filetool.sh -b`
 
-__Note:__ You should be able to reboot and SSH into the TinyCore gateway now.
+__Note:__ You should be able to reboot and SSH into the TinyCore gateway now
+with `ssh -p 12345 tc@localhost` on the host machine.
+
+### Static IP
+
+Next, we need to configure the eth1 interface of TinyCore with the static IP
+address 192.168.12.1, netmask 255.255.255.0. This is the interface it will use
+to connect to the Internet, and we have to persist the change so it deploys the
+configuration every time the machine boots up. We can do this with a command:
+
+`ifconfig eth1 192.168.12.1 netmask 255.255.255.0 broadcast 192.168.12.255 up`
+
+But we want the change to be persistent, so that it deploys the new
+configuration every time the machine boots up. We'll put it in a startup script,
+`/opt/eth1.sh` soon, but we have some other stuff to do first.
+
+
+```
+#! /bin/sh
+
+# kill dhcp client for eth1
+if [ -f /var/run/udhcpc.eth1.pid ]; then
+	kill `cat /var/run/udhcpc.eth1.pid`
+	sleep 0.1
+fi
+
+# configure interface eth1
+ifconfig eth1 192.168.12.1 netmask 255.255.255.0 broadcast 192.168.12.255 up
+
+# start the DHCP server process in the background once the interface is ready
+sudo udhcpd /etc/eth1_udhcpd.conf &
+```
