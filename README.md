@@ -69,6 +69,26 @@ But we want the change to be persistent, so that it deploys the new
 configuration every time the machine boots up. We'll put it in a startup script,
 `/opt/eth1.sh` soon, but we have some other stuff to do first.
 
+### IP Gateway
+
+For this step we need to configure TinyCore to actually forward IP packets. For
+this we'll need to packages, so install them now:
+
+```
+tce-load -wi iptables
+tce-load -wi ipv6-KERNEL
+```
+
+Next we need to turn on IP forwarding, and configure it to do this at startup:
+
+`sudo sh -c 'echo "sudo sysctl -w net.ipv4.ip_forward=1" >> /opt/bootlocal.sh'`
+
+And use the newly installed iptables package to route packets from eth0 (the
+interface connected to the Android VM).
+
+`sudo sh -c 'echo "sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE" >> /opt/bootlocal.sh'`
+ 
+
 
 ```
 #! /bin/sh
