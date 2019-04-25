@@ -1,0 +1,235 @@
+#! /usr/local/bin/python3
+
+from sklearn.svm import SVC
+from sklearn.externals import joblib
+from kamene.all import *
+import time
+import threading
+import sys
+import numpy as np
+import statistics as stats
+import pickle
+from scipy.stats import skew
+from scipy.stats import kurtosis
+
+flowdict = {}
+burstdaemon = None
+previouslyprinted = False
+
+predictions = [0] * 6
+
+model = None
+
+applications = ['unknown', 'youtube', 'browser', 'fruit_ninja', 'google_news', 'weather_channel']
+
+try:
+    model = joblib.load('model.pkl')
+except:
+    print("couldn't load machine learning model model.pkl")
+    exit()
+
+def endburst():
+    global flowdict
+    doneflowstrings = []
+    for k, v in flowdict.items():
+        if flowstringf(v) not in doneflowstrings:
+            # find the inverse flow
+            currflow = v
+            otherflow = None
+            packetsreceived = 0
+            bytesreceived = 0
+            othertimes = []
+            otherlengths = []
+            if otherflowstringf(v) in flowdict:
+                otherflow = flowdict[otherflowstringf(v)]
+                packetsreceived = otherflow['packetssent']
+                bytesreceived = otherflow['bytessent']
+                othertimes = otherflow['times']
+                otherlengths = otherflow['packetlengths']
+                doneflowstrings.append(otherflowstringf(v))
+            fv = makefeaturevector(v, bytesreceived, packetsreceived, \
+                    othertimes, otherlengths)
+            prediction = model.predict([fv])
+            trueprediction = prediction[0]
+            probabilities = model.predict_proba([fv])
+            probabilities[0].sort()
+            certainty = probabilities[0][-1]
+            secondcertainty = probabilities[0][-2]
+            if certainty - secondcertainty < .2 or certainty < .3:
+                trueprediction = 0
+            predictions[trueprediction] += 1
+            printhalfflow(v, packetsreceived, bytesreceived, applications[trueprediction])
+            
+    flowdict = {}
+
+
+def threadtest():
+    global previouslyprinted
+    if len(flowdict) > 0:
+        currenttime = time.time()
+        latesttime = None
+        for k, v in flowdict.items():
+            if (latesttime == None):
+                latesttime = v['endtime']
+            if (v['endtime'] > latesttime):
+                latesttime = v['endtime']
+        print("TIME DIFFERENCE: " + str(currenttime - latesttime))
+        if currenttime - latesttime < 1:
+            print(latesttime)
+            previouslyprinted = False
+        else:
+            if not previouslyprinted:
+                print("BURST ENDED")
+                endburst()
+                previouslyprinted = True
+
+    burstdaemon = threading.Timer(0.2, threadtest)
+    burstdaemon.daemon = True
+    burstdaemon.start()
+
+
+def flowstring(p):
+    return "sport:" + str(p.sport) + "dport:" + str(p.dport) + "src:" + p[IP].src + "dst:" + p[IP].dst + layerstring(p)
+
+
+def otherflowstring(p):
+    return "sport:" + str(p.dport) + "dport:" + str(p.sport) + "src:" + p[IP].dst + "dst:" + p[IP].src + layerstring(p)
+
+
+def otherflowstringf(flow):
+    return "sport:" + str(flow['dport']) + "dport:" + str(flow['sport']) + "src:" + flow['dst'] + "dst:" + flow['src'] + flow['protocol']
+
+
+def flowstringf(flow):
+    return "sport:" + str(flow['sport']) + "dport:" + str(flow['dport']) + "src:" + flow['src'] + "dst:" + flow['dst'] + flow['protocol']
+
+
+def myhaslayer(p, layer):
+    r = p.haslayer(layer)
+    if (r == 0):
+        return False
+    return True
+
+
+def layerstring(p):
+    if (myhaslayer(p, UDP)):
+        return "UDP"
+    elif (myhaslayer(p, TCP)):
+        return "TCP"
+    return ""
+
+
+def onsniff(p):
+    if (layerstring(p) == ""):
+        print ("non TCP or UPD packet, so ignoring it")
+    else:
+        fstring = flowstring(p)
+        if fstring not in flowdict:
+            flowdict[fstring] = {
+                'protocol': layerstring(p),
+                'sport': p.sport,
+                'dport': p.dport,
+                'src': p[IP].src,
+                'dst': p[IP].dst,
+                'starttime': p.time,
+                'bytessent': 0,
+                'packetssent': 0,
+                'packetlengths': [],
+                'times': []
+            }
+            flowdict[fstring]['endtime'] = flowdict[fstring]['starttime']
+
+        currflow = flowdict[fstring]
+        currflow['endtime'] = p.time
+        currflow['bytessent'] += len(p)
+        currflow['packetssent'] += 1
+        currflow['packetlengths'].append(len(p))
+        currflow['times'].append(p.time)
+
+
+def printhalfflow(f, bytesreceived, packetsreceived, classification):
+    print(str(f['endtime']) + " " + f['src'] + " " + f['dst'] + " " + \
+            str(f['sport']) + " " + str(f['dport']) + " " + f['protocol'] + " " \
+            + str(f['packetssent']) + " " + str(packetsreceived) + " " + \
+            str(f['bytessent']) + " " + str(bytesreceived) + " " + classification)
+
+
+def makefeaturevector(f, bytesreceived, packetsreceived, othertimes, otherlengths):
+    bytesdirection1 = bytesreceived
+    bytesdirection2 = f['bytessent']
+    if bytesdirection1 > bytesdirection2:
+        temp = bytesdirection1
+        bytesdirection1 = bytesdirection2
+        bytesdirection2 = temp
+    packetsdirection1 = packetsreceived
+    packetsdirection2 = f['packetssent']
+    if packetsdirection1 > packetsdirection2:
+        temp = packetsdirection1
+        packetsdirection1 = packetsdirection2
+        packetsdirection2 = temp
+
+    byteratio = bytesdirection1 / bytesdirection2
+    packetratio = packetsdirection1 / packetsdirection2
+
+    alllengths = f['packetlengths'] + otherlengths
+    lengthmean = stats.mean(alllengths)
+    lengthstdev = 0
+
+    if len(alllengths) > 2:
+        lengthstdev = stats.stdev(alllengths)
+
+    alltimes = othertimes + f['times']
+    alltimes.sort()
+
+    i = 0
+    timediffs = []
+
+    while i < len(alltimes) - 1:
+        deltatime = alltimes[i + 1] - alltimes[i]
+        timediffs.append(deltatime)
+        i += 1
+
+    timemean = 0
+    timestdev = 0
+
+    if (len(timediffs) > 0):
+        timemean = stats.mean(timediffs)
+
+    if (len(timediffs) > 2):
+        timestdev = stats.stdev(alltimes)
+
+    minlength = min(alllengths)
+    maxlength = max(alllengths)
+    numpackets = f['packetssent'] + packetsreceived
+    numbytes = f['bytessent'] + bytesreceived
+
+    timekurtosis = 0
+    timeskew = 0
+    mintime = 0
+    maxtime = 0
+    
+    if len(timediffs) > 0:
+        timekurtosis = kurtosis(timediffs)
+        timeskew = skew(timediffs)
+        mintime = min(timediffs)
+        maxtime = max(timediffs)
+
+    lengthkurtosis = kurtosis(alllengths)
+    lengthskew = skew(alllengths)
+
+    protocol = 0
+    if f['protocol'] == 'TCP':
+        protocol = 1
+
+    fv = [byteratio, packetratio, lengthmean, lengthstdev, lengthkurtosis, lengthskew,
+        timemean, timestdev, timekurtosis, timeskew, minlength, maxlength, mintime,
+        maxtime, protocol]
+
+    return fv
+
+
+print("starting burst demon")
+threadtest()
+sniff(iface="eth1", prn = onsniff, count = 10000)
+
+
