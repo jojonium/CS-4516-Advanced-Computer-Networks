@@ -39,8 +39,8 @@ except:
     print("no pkl file, so creating one")
     #model = SVC(kernel = 'poly', degree = 2, gamma = 1, coef0 = 0, probability = True)
     #model = SVC(kernel = 'linear')
-    #model = RandomForestClassifier(n_estimators = 100)
-    model = LinearSVC()
+    model = RandomForestClassifier(n_estimators = 100)
+    #model = LinearSVC()
 
 print("about to fit the vectors")
 model = model.fit(vectors, labels)

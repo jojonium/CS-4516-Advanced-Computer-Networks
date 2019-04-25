@@ -36,7 +36,7 @@ else:
 
 
 packets = rdpcap(pcapname)
-print(len(packets))
+#print(len(packets))
 
 
 def endburst():
@@ -71,25 +71,25 @@ def endburst():
                 #if v['packetssent'] + packetsreceived < 3:
                 #    print("this flow is too short to make a prediction")
                 #    trueprediction = 0
-                if certainty - secondcertainty < .2 or certainty < .3:
+                if certainty - secondcertainty < .05 or certainty < .25:
                     trueprediction = 0
 
                 #print("we think this flow is from: " + applications[trueprediction] + \
                 #    " with " + str(round(100 * certainty, 2)) + "% certainty")
                 predictions[trueprediction] += 1
-                printhalfflow(v, packetsreceived, bytesreceived, applications[trueprediction])
+                #printhalfflow(v, packetsreceived, bytesreceived, applications[trueprediction])
             
     flowdict = {}
 
 
 def flowstring(p):
     return "sport:" + str(p.sport) + "dport:" + str(p.dport) + "src:" + \
-    p[IP].src + "dst:" + p[IP].dst + layerstring(p)
+    p[1].src + "dst:" + p[1].dst + layerstring(p)
 
 
 def otherflowstring(p):
     return "sport:" + str(p.dport) + "dport:" + str(p.sport) + "src:" + \
-    p[IP].dst + "dst:" + p[IP].src + layerstring(p)
+    p[1].dst + "dst:" + p[1].src + layerstring(p)
 
 
 def otherflowstringf(flow):
@@ -128,11 +128,12 @@ def checktimeout(p):
                 latesttime = v['endtime']
             if (v['endtime'] > latesttime):
                 latesttime = v['endtime']
+
         if currenttime - latesttime < 1:
             previouslyprinted = False
         else:
             if not previouslyprinted:
-                print("BURST ENDED")
+                #print("BURST ENDED")
                 endburst()
                 previouslyprinted = True
 
@@ -148,8 +149,8 @@ def newpacket(p):
                 'protocol': layerstring(p),
                 'sport': p.sport,
                 'dport': p.dport,
-                'src': p[IP].src,
-                'dst': p[IP].dst,
+                'src': p[1].src,
+                'dst': p[1].dst,
                 'starttime': p.time,
                 'bytessent': 0,
                 'packetssent': 0,
@@ -166,11 +167,13 @@ def newpacket(p):
         currflow['times'].append(p.time)
 
 
+'''
 def printhalfflow(f, bytesreceived, packetsreceived, classification):
     print(str(f['endtime']) + " " + f['src'] + " " + f['dst'] + " " + \
             str(f['sport']) + " " + str(f['dport']) + " " + f['protocol'] + " " \
             + str(f['packetssent']) + " " + str(packetsreceived) + " " + \
             str(f['bytessent']) + " " + str(bytesreceived) + " " + classification)
+'''
 
 
 def makefeaturevector(f, bytesreceived, packetsreceived, othertimes, otherlengths):
@@ -257,13 +260,17 @@ def analyzepackets():
 def printpredictions():
     i = 0
     total = sum(predictions)
-    print("total: " + str(total))
+    # print("total: " + str(total))
+    print("================= " + pcapname + " =================")
     while i < len(applications):
         print(applications[i] + ": " + str(predictions[i]) + " " + str(round(100 * predictions[i] / total, 2)) + "%")
-        print("excluding unknown: " + str(round(100 * predictions[i] / (total - predictions[0]), 2)) + "%")
+        if i != 0:
+            print("\texcluding unknown: " + str(round(100 * predictions[i] / (total - predictions[0]), 2)) + "%")
         i += 1
 
+
 analyzepackets()
+endburst()
 savename = pcapname.split(".")[0] + ".fv.p"
 if not doclassification:
     pickle.dump(vectors, open(savename, "wb"))
