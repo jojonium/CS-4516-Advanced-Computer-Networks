@@ -1,0 +1,78 @@
+\documentclass[a4paper, 11pt]{article} % 11 pt font
+\usepackage[utf8]{inputenc}
+\usepackage[american]{babel}
+\usepackage[margin=1in]{geometry} % 1 in margins
+\usepackage{csquotes}
+\usepackage{lipsum}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{15.2pt}
+\pagestyle{fancy}
+\lhead[]{Cole Granof and Joseph Petitti}
+\rhead[]{Advanced Computer Networks}
+\chead[]{Project Report}
+
+\usepackage[
+	backend=biber,
+	style=ieee
+]{biblatex}
+
+\bibliography{references}
+
+\title{Advanced Computer Networks Project Report}
+\author{Cole Granof and Joseph Petitti}
+\date{\today}
+
+\begin{document}
+\thispagestyle{empty}
+
+\maketitle
+
+\section{Overview}
+
+\textbf{What the project consisted of and what you implemented.} This project
+was inspired by a paper we read for class \cite{tscm16}.
+
+\lipsum
+
+
+\section{Phase Details}
+
+This section describes the implementation of each phase of the project.
+
+\subsection{Phase 1}
+
+How was the gateway configured?
+
+\lipsum
+
+\subsection{Phase 2}
+
+How was traffic logging implemented?
+
+\lipsum
+
+\subsection{Phase 3}
+
+What classification algorithm did you use? Which features? How many traces did
+you use for training and evaluation? Which accuracy did you obtain?
+
+\lipsum
+
+\subsection{Phase 4}
+
+How was the classifier integrated into the traffic logger?
+
+\lipsum
+
+\section{Lessons Learned and Limitations}
+
+Describe anything that you tried during any of the phases that did not work.
+Also describe limitations of your implementation and anything that did not
+perform according to your expectations.
+
+\newpage
+
+\printbibliography
+
+\end{document}
