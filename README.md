@@ -2,6 +2,12 @@
 
 Coursework and projects for WPI class CS 4516: Advanced Computer Networks
 
+### Table of Contents
+
+* [Phase 1](#phase-1)
+* [Phase 2](#phase-2)
+* [Phase 3](#phase-3)
+* [Phase 4](#phase-4)
 
 Phase 1
 =======
