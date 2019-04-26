@@ -50,14 +50,46 @@ How was the gateway configured?
 
 How was traffic logging implemented?
 
-\lipsum
-
 \subsection{Phase 3}
 
-What classification algorithm did you use? Which features? How many traces did
-you use for training and evaluation? Which accuracy did you obtain?
+\subsubsection{Classification Vectors}
 
-\lipsum
+While we were in the process of trying to make the machine learning component as
+accurate as possible, we continually added features in the hopes of improving the
+accuracy of the model. Our feature vector originally contained only five elements,
+and expanded to fourteen elements as we iterated on our strategy for machine learning.
+
+The following elements within the feature vector are as follows:
+
+\begin{itemize}
+    \item Byte ratio (bytes sent / bytes received, or reciprocal)
+    \item Packet ratio (packets sent / packets received, or reciprocal)
+    \item Mean packet length
+    \item Standard deviation of packet lengths (zero if n <= 2)
+    \item Packet length kurtosis
+    \item Packet length skew
+    \item Mean time gap between each packet (zero if n <= 1)
+    \item Time gap kurtosis
+    \item Time gap skew
+    \item Min packet length
+    \item Max packet length
+    \item Min time gap
+    \item Max time gap
+    \item Protocol (1 for TCP, 0 for UDP)
+\end{itemize}
+
+As you can see from the list above, the bulk of the features are statistical measure
+for two main lists.
+
+We collected four rounds of packet traces for each of the applications being tested.
+Each round of training data collection took around thirty minutes to an hour. Certain
+applications generated many megabytes of data. This was especially true for applications
+that regularly streamed video, such as YouTube. Other applications generated far less
+traffic, such as Fruit Ninja, which played ads at relatively infrequent intervals.
+
+
+(What classification algorithm did you use? Which features? How many traces did
+you use for training and evaluation? Which accuracy did you obtain?)
 
 \subsection{Phase 4}
 
